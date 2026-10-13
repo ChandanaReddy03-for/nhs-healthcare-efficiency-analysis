@@ -1,0 +1,1780 @@
+{
+ "winsor": {
+  "cap_wait_hi": 100.6,
+  "cap_wait_lo": 1.1,
+  "share_wait_hi": 0.1001952761763065,
+  "share_wait_lo": 0.10526315789473684,
+  "cap_dur_hi": 33.4,
+  "cap_dur_lo": 4.2,
+  "share_dur_hi": 0.10038125348707458,
+  "share_dur_lo": 0.10093918541937884,
+  "mean_wait_recorded": 40.76155965222243,
+  "mean_wait_derived": 44.08641745707024,
+  "max_wait_derived": 297.33333333333337,
+  "mean_dur_recorded": 17.052993072345174,
+  "mean_dur_derived": 17.479525060442626,
+  "max_dur_derived": 58.700000000000045,
+  "p95_wait_derived": 124.51666666666665,
+  "p99_wait_derived": 176.70750000000012
+ },
+ "iqr": [
+  {
+   "field": "wait_min",
+   "q1": 12.583333333333357,
+   "q3": 64.63333333333333,
+   "lower_fence": -65.4916666666666,
+   "upper_fence": 142.7083333333333,
+   "flagged": 2525
+  },
+  {
+   "field": "duration_min",
+   "q1": 8.600000000000023,
+   "q3": 24.700000000000045,
+   "lower_fence": -15.550000000000011,
+   "upper_fence": 48.85000000000008,
+   "flagged": 402
+  },
+  {
+   "field": "scheduling_interval",
+   "q1": 2.0,
+   "q3": 10.0,
+   "lower_fence": -10.0,
+   "upper_fence": 22.0,
+   "flagged": 3608
+  }
+ ],
+ "overlap_share": 0.0,
+ "median_changeover_min": 1.0166666666666515,
+ "dq_log": [
+  {
+   "check": "Row counts",
+   "finding": "appointments=111,488; patients=36,697; slots=104,360",
+   "action": "Loaded as supplied"
+  },
+  {
+   "check": "Exact duplicate rows",
+   "finding": "appointments=0; patients=0; slots=0",
+   "action": "None to remove"
+  },
+  {
+   "check": "Duplicate primary keys",
+   "finding": "appointment_id=0; patient_id=0; slot_id=0",
+   "action": "None to remove"
+  },
+  {
+   "check": "Duplicate patients (name+DOB+sex)",
+   "finding": "0 duplicates; 5,708 repeated names but with different DOB/ID",
+   "action": "Repeated names are different people (distinct DOB); no merge"
+  },
+  {
+   "check": "slot_id repeated in appointments",
+   "finding": "7,842 appointments share a slot with another appointment",
+   "action": "Legitimate: a cancelled booking later re-booked. Kept; used to measure slot re-fill"
+  },
+  {
+   "check": "Referential integrity",
+   "finding": "orphan slot_id=0; orphan patient_id=0",
+   "action": "All keys join; no action"
+  },
+  {
+   "check": "Date/time standardisation",
+   "finding": "Dates parsed to datetime64; times kept as HH:MM:SS text and converted to minutes-since-midnight for maths; status/sex trimmed and case-normalised",
+   "action": "Applied"
+  },
+  {
+   "check": "Missing waiting_time / duration / timestamps",
+   "finding": "25,456 nulls in each column; null for 100% of non-attended rows and 0% of attended rows = True",
+   "action": "DEVIATION FROM BRIEF: NOT imputed. Nulls are structural (cancelled / DNA patients were never seen), so a specialty or overall median would fabricate waits for people who never attended. Wait metrics are computed on attended visits only"
+  },
+  {
+   "check": "Missing is_available",
+   "finding": "0 nulls",
+   "action": "Brief's 'overall average' rule not needed; field is complete"
+  },
+  {
+   "check": "Other missing values",
+   "finding": "patients nulls=0; appointments non-timing nulls=0",
+   "action": "None"
+  },
+  {
+   "check": "scheduling_interval = appointment_date - scheduling_date",
+   "finding": "100.0% consistent",
+   "action": "Interval used directly as 'booking lead time (days)'"
+  },
+  {
+   "check": "Appointment sex / age vs patient master",
+   "finding": "sex mismatches=0; age within 1 year of DOB-derived age=100.0%",
+   "action": "Consistent; patient master used for insurance"
+  },
+  {
+   "check": "Capped (winsorised) measures",
+   "finding": "waiting_time: 10.0% of attended visits sit exactly at the 100.6-min ceiling and 10.5% at the 1.1-min floor (= 90th / 10th percentile); appointment_duration: 10.0% at 33.4 min, 10.1% at 4.2 min. Timestamps (start - check-in) show uncapped waits up to 297 min (mean 44.1 vs 40.8 recorded) and consultations up to 59 min (mean 17.48 vs 17.05)",
+   "action": "KEY FINDING. The supplied 'cleaned' fields hide the tail (this is also why an IQR screen finds no outliers). Analysis uses TIMESTAMP-DERIVED wait_min and duration_min; recorded values kept as wait_recorded_min / duration_recorded_min for sensitivity. Rows are not removed"
+  },
+  {
+   "check": "Unresolved status ('unknown', 'scheduled')",
+   "finding": "unknown=446, scheduled=141 (all scheduled fall 2024-12-02 to 2024-12-24, i.e. the data-extract tail)",
+   "action": "Kept in volume counts; excluded from outcome-rate denominators (attended / DNA / cancelled)"
+  },
+  {
+   "check": "Slot rows after last appointment date",
+   "finding": "200 slot rows (5 days after 2024-12-24), all flagged available with zero appointments",
+   "action": "Excluded from utilisation (no appointment data exists for those days)"
+  },
+  {
+   "check": "IQR outlier screen (on timestamp-derived measures)",
+   "finding": "wait_min: 2,525 flagged (fence -65.5-142.7); duration_min: 402 flagged (fence -15.6-48.9); scheduling_interval: 3,608 flagged (fence -10.0-22.0)",
+   "action": "Flag columns added; nothing removed. Long waits are real (patients queued behind overrunning sessions); lead times >22 days are valid bookings inside a 30-day horizon"
+  },
+  {
+   "check": "Overlapping consultations (timestamps)",
+   "finding": "0.0% of attended visits start before the previous one ended; median gap between consecutive consultations = 1.02 min",
+   "action": "Timestamps form a clean single queue (no overlaps) with ~1 min changeover. Used to calibrate/validate the simulation. (Recorded capped durations would wrongly suggest ~12% overlap)"
+  }
+ ],
+ "kpi": {
+  "appointments_total": 111488,
+  "patients_total": 36697,
+  "date_from": "2015-01-01",
+  "date_to": "2024-12-24",
+  "operating_days": 2587,
+  "slots_in_window": 104160,
+  "mean_wait_min": 44.08641745707024,
+  "median_wait_min": 33.48333333333335,
+  "p90_wait_min": 100.6316666666668,
+  "share_wait_over_30": 0.5380556072159196,
+  "share_wait_over_60": 0.2787916124232844,
+  "mean_lead_days": 7.190146024684271,
+  "median_lead_days": 5.0,
+  "p90_lead_days": 16.0,
+  "mean_duration_min": 17.479525060442626,
+  "slot_len_min": 15,
+  "booked_rate": 0.8951036866359448,
+  "effective_rate": 0.8306411902715959,
+  "dna_rate": 0.07140004533336211,
+  "cancel_rate": 0.1645972534061911,
+  "dna_share_of_slots": 0.06386799648557057,
+  "open_share_of_slots": 0.10549081324283356,
+  "cancel_refill_rate": 0.3785471677440561,
+  "cancelled_appts": 18254,
+  "attended_per_day": 33.25550831078469,
+  "time_load_pct": 0.9688174848601985,
+  "mean_finish_clock_h": 18.951162543486664,
+  "mean_overrun_min": 58.40857492591161,
+  "share_days_overrun_30": 0.6389640510243525,
+  "share_days_overrun_60": 0.4159257827599536,
+  "mean_start_delay_min": 34.096318617878616,
+  "status_counts": {
+   "attended": 86032,
+   "cancelled": 18254,
+   "did not attend": 6615,
+   "unknown": 446,
+   "scheduled": 141
+  }
+ },
+ "slot_outcomes": {
+  "Attended": 86032,
+  "Cancelled, not re-filled": 10412,
+  "Did not attend": 6615,
+  "Unresolved": 587,
+  "Never booked": 514
+ },
+ "slot_outcomes_pct_resolved": {
+  "Attended": 0.8306411902715959,
+  "Cancelled, not re-filled": 0.10052812991802883,
+  "Did not attend": 0.06386799648557057,
+  "Never booked": 0.004962683324804727
+ },
+ "cancel_refill_detail": {
+  "cancelled_appts": 18254,
+  "refilled": 6910,
+  "not_refilled": 11344
+ },
+ "wait_by_hour": [
+  {
+   "hour": 8,
+   "mean_wait": 15.73,
+   "median_wait": 12.79,
+   "n": 8616,
+   "mean_dur": 17.52,
+   "mean_delay": 5.63
+  },
+  {
+   "hour": 9,
+   "mean_wait": 24.06,
+   "median_wait": 19.85,
+   "n": 8588,
+   "mean_dur": 17.57,
+   "mean_delay": 14.15
+  },
+  {
+   "hour": 10,
+   "mean_wait": 31.37,
+   "median_wait": 26.25,
+   "n": 8563,
+   "mean_dur": 17.33,
+   "mean_delay": 21.53
+  },
+  {
+   "hour": 11,
+   "mean_wait": 37.57,
+   "median_wait": 31.07,
+   "n": 8621,
+   "mean_dur": 17.52,
+   "mean_delay": 27.66
+  },
+  {
+   "hour": 12,
+   "mean_wait": 43.73,
+   "median_wait": 36.58,
+   "n": 8595,
+   "mean_dur": 17.39,
+   "mean_delay": 33.78
+  },
+  {
+   "hour": 13,
+   "mean_wait": 48.54,
+   "median_wait": 41.27,
+   "n": 8582,
+   "mean_dur": 17.56,
+   "mean_delay": 38.49
+  },
+  {
+   "hour": 14,
+   "mean_wait": 53.29,
+   "median_wait": 45.5,
+   "n": 8585,
+   "mean_dur": 17.57,
+   "mean_delay": 43.23
+  },
+  {
+   "hour": 15,
+   "mean_wait": 58.02,
+   "median_wait": 50.58,
+   "n": 8619,
+   "mean_dur": 17.51,
+   "mean_delay": 48.08
+  },
+  {
+   "hour": 16,
+   "mean_wait": 62.4,
+   "median_wait": 53.85,
+   "n": 8597,
+   "mean_dur": 17.52,
+   "mean_delay": 52.34
+  },
+  {
+   "hour": 17,
+   "mean_wait": 65.96,
+   "median_wait": 56.5,
+   "n": 8666,
+   "mean_dur": 17.32,
+   "mean_delay": 55.91
+  }
+ ],
+ "hour_anova": {
+  "F": 1710.1214239597637,
+  "p": 0.0,
+  "eta2": 0.15176632906382068
+ },
+ "wait_slope_per_hour": 5.487874936553115,
+ "wait_8am": 15.733120550913032,
+ "wait_5pm": 65.95649088391416,
+ "heat_weekday_hour": {
+  "8": {
+   "Monday": 16.7,
+   "Tuesday": 15.2,
+   "Wednesday": 15.9,
+   "Thursday": 15.7,
+   "Friday": 15.2
+  },
+  "9": {
+   "Monday": 24.4,
+   "Tuesday": 24.7,
+   "Wednesday": 23.7,
+   "Thursday": 24.4,
+   "Friday": 23.2
+  },
+  "10": {
+   "Monday": 32.0,
+   "Tuesday": 33.0,
+   "Wednesday": 30.7,
+   "Thursday": 31.7,
+   "Friday": 29.4
+  },
+  "11": {
+   "Monday": 38.8,
+   "Tuesday": 38.6,
+   "Wednesday": 37.4,
+   "Thursday": 38.3,
+   "Friday": 34.8
+  },
+  "12": {
+   "Monday": 45.4,
+   "Tuesday": 44.3,
+   "Wednesday": 43.4,
+   "Thursday": 44.6,
+   "Friday": 40.9
+  },
+  "13": {
+   "Monday": 49.5,
+   "Tuesday": 49.3,
+   "Wednesday": 49.4,
+   "Thursday": 48.8,
+   "Friday": 45.8
+  },
+  "14": {
+   "Monday": 53.9,
+   "Tuesday": 55.2,
+   "Wednesday": 54.0,
+   "Thursday": 53.9,
+   "Friday": 49.3
+  },
+  "15": {
+   "Monday": 58.6,
+   "Tuesday": 59.0,
+   "Wednesday": 57.1,
+   "Thursday": 59.4,
+   "Friday": 56.1
+  },
+  "16": {
+   "Monday": 62.6,
+   "Tuesday": 60.9,
+   "Wednesday": 64.3,
+   "Thursday": 63.5,
+   "Friday": 60.7
+  },
+  "17": {
+   "Monday": 67.1,
+   "Tuesday": 63.6,
+   "Wednesday": 66.9,
+   "Thursday": 67.9,
+   "Friday": 64.3
+  }
+ },
+ "dow_anova": {
+  "F": 14.359159496983247,
+  "p": 1.0108771939204081e-11,
+  "means": {
+   "Friday": 42.04,
+   "Monday": 44.91,
+   "Thursday": 44.82,
+   "Tuesday": 44.33,
+   "Wednesday": 44.34
+  }
+ },
+ "by_year": [
+  {
+   "year": 2015,
+   "mean_wait": 43.4914,
+   "mean_lead": 7.1649,
+   "appts": 11238,
+   "dna_rate": 0.0686,
+   "cancel_rate": 0.1625
+  },
+  {
+   "year": 2016,
+   "mean_wait": 43.0964,
+   "mean_lead": 7.2255,
+   "appts": 11225,
+   "dna_rate": 0.0732,
+   "cancel_rate": 0.1639
+  },
+  {
+   "year": 2017,
+   "mean_wait": 42.6504,
+   "mean_lead": 7.198,
+   "appts": 11193,
+   "dna_rate": 0.0711,
+   "cancel_rate": 0.1635
+  },
+  {
+   "year": 2018,
+   "mean_wait": 42.4488,
+   "mean_lead": 7.1491,
+   "appts": 11175,
+   "dna_rate": 0.0728,
+   "cancel_rate": 0.1666
+  },
+  {
+   "year": 2019,
+   "mean_wait": 44.2946,
+   "mean_lead": 7.1466,
+   "appts": 11238,
+   "dna_rate": 0.0657,
+   "cancel_rate": 0.1709
+  },
+  {
+   "year": 2020,
+   "mean_wait": 44.3643,
+   "mean_lead": 7.2258,
+   "appts": 11256,
+   "dna_rate": 0.0723,
+   "cancel_rate": 0.1588
+  },
+  {
+   "year": 2021,
+   "mean_wait": 43.943,
+   "mean_lead": 7.2548,
+   "appts": 11211,
+   "dna_rate": 0.0723,
+   "cancel_rate": 0.1609
+  },
+  {
+   "year": 2022,
+   "mean_wait": 48.2587,
+   "mean_lead": 7.1954,
+   "appts": 11163,
+   "dna_rate": 0.0677,
+   "cancel_rate": 0.161
+  },
+  {
+   "year": 2023,
+   "mean_wait": 43.555,
+   "mean_lead": 7.1602,
+   "appts": 11227,
+   "dna_rate": 0.0768,
+   "cancel_rate": 0.1704
+  },
+  {
+   "year": 2024,
+   "mean_wait": 44.7845,
+   "mean_lead": 7.1805,
+   "appts": 10562,
+   "dna_rate": 0.0736,
+   "cancel_rate": 0.1677
+  }
+ ],
+ "by_month": [
+  {
+   "month": 1,
+   "mean_wait": 49.14,
+   "mean_lead": 7.19,
+   "mean_workload_min": 595.44,
+   "attended_per_day": 33.46
+  },
+  {
+   "month": 2,
+   "mean_wait": 45.24,
+   "mean_lead": 7.28,
+   "mean_workload_min": 585.65,
+   "attended_per_day": 33.24
+  },
+  {
+   "month": 3,
+   "mean_wait": 42.58,
+   "mean_lead": 7.19,
+   "mean_workload_min": 574.69,
+   "attended_per_day": 33.12
+  },
+  {
+   "month": 4,
+   "mean_wait": 41.2,
+   "mean_lead": 7.19,
+   "mean_workload_min": 573.32,
+   "attended_per_day": 33.17
+  },
+  {
+   "month": 5,
+   "mean_wait": 43.28,
+   "mean_lead": 7.2,
+   "mean_workload_min": 578.94,
+   "attended_per_day": 33.26
+  },
+  {
+   "month": 6,
+   "mean_wait": 43.05,
+   "mean_lead": 7.2,
+   "mean_workload_min": 579.95,
+   "attended_per_day": 33.3
+  },
+  {
+   "month": 7,
+   "mean_wait": 41.72,
+   "mean_lead": 7.21,
+   "mean_workload_min": 575.56,
+   "attended_per_day": 33.08
+  },
+  {
+   "month": 8,
+   "mean_wait": 44.27,
+   "mean_lead": 7.15,
+   "mean_workload_min": 584.7,
+   "attended_per_day": 33.12
+  },
+  {
+   "month": 9,
+   "mean_wait": 44.3,
+   "mean_lead": 7.25,
+   "mean_workload_min": 578.28,
+   "attended_per_day": 33.11
+  },
+  {
+   "month": 10,
+   "mean_wait": 45.25,
+   "mean_lead": 7.18,
+   "mean_workload_min": 586.83,
+   "attended_per_day": 33.4
+  },
+  {
+   "month": 11,
+   "mean_wait": 41.25,
+   "mean_lead": 7.08,
+   "mean_workload_min": 574.38,
+   "attended_per_day": 33.21
+  },
+  {
+   "month": 12,
+   "mean_wait": 47.98,
+   "mean_lead": 7.17,
+   "mean_workload_min": 588.31,
+   "attended_per_day": 33.64
+  }
+ ],
+ "monthly_series": {
+  "2015-01": 43.85045105999098,
+  "2015-02": 43.18771271271272,
+  "2015-03": 38.84871970736168,
+  "2015-04": 41.30616284300495,
+  "2015-05": 42.37598747591522,
+  "2015-06": 45.15888143176734,
+  "2015-07": 46.201276970497574,
+  "2015-08": 38.926903073286056,
+  "2015-09": 47.172798524665744,
+  "2015-10": 49.03696808510638,
+  "2015-11": 34.32882043935052,
+  "2015-12": 50.15019206145967,
+  "2016-01": 52.35739419876367,
+  "2016-02": 51.44480459770116,
+  "2016-03": 40.34605664488017,
+  "2016-04": 45.873,
+  "2016-05": 45.55377569258267,
+  "2016-06": 38.0831712962963,
+  "2016-07": 39.96812015503876,
+  "2016-08": 43.08408190224571,
+  "2016-09": 47.18594104308389,
+  "2016-10": 38.732159961685824,
+  "2016-11": 33.082703081232495,
+  "2016-12": 41.35429292929293,
+  "2017-01": 48.13891184573003,
+  "2017-02": 38.30762962962963,
+  "2017-03": 43.37292219274978,
+  "2017-04": 47.32927254608869,
+  "2017-05": 47.91226128472223,
+  "2017-06": 41.096000893655045,
+  "2017-07": 41.127769852591534,
+  "2017-08": 42.27422839506173,
+  "2017-09": 37.62259523809524,
+  "2017-10": 39.88872350022553,
+  "2017-11": 47.227450980392156,
+  "2017-12": 36.634184914841846,
+  "2018-01": 48.2195500218436,
+  "2018-02": 34.10587786259542,
+  "2018-03": 42.879693223443226,
+  "2018-04": 46.72132175590931,
+  "2018-05": 36.61726427622842,
+  "2018-06": 40.429264132553605,
+  "2018-07": 35.697497704315886,
+  "2018-08": 44.756342957130364,
+  "2018-09": 43.262175648702595,
+  "2018-10": 48.505059132720106,
+  "2018-11": 38.602039381153304,
+  "2018-12": 48.64540644540645,
+  "2019-01": 53.764871794871794,
+  "2019-02": 47.9638469284995,
+  "2019-03": 51.94022824536376,
+  "2019-04": 46.66185335132704,
+  "2019-05": 42.10637125220459,
+  "2019-06": 38.38687943262411,
+  "2019-07": 46.70907310704961,
+  "2019-08": 41.44724480578139,
+  "2019-09": 42.384133915574964,
+  "2019-10": 29.864465408805028,
+  "2019-11": 43.92824207492796,
+  "2019-12": 45.81773761713521,
+  "2020-01": 48.62767624020888,
+  "2020-02": 53.31130153999006,
+  "2020-03": 31.73557558945908,
+  "2020-04": 38.823278236914604,
+  "2020-05": 40.28302203065134,
+  "2020-06": 37.697805212620025,
+  "2020-07": 41.33566493955095,
+  "2020-08": 48.92274904214559,
+  "2020-09": 50.4699508489723,
+  "2020-10": 46.372550366300366,
+  "2020-11": 44.69565115185708,
+  "2020-12": 50.06205944798302,
+  "2021-01": 40.58005698005698,
+  "2021-02": 40.23727227966519,
+  "2021-03": 43.68986185383244,
+  "2021-04": 46.560181311018134,
+  "2021-05": 36.485536802625404,
+  "2021-06": 49.38982240437159,
+  "2021-07": 33.367525533890436,
+  "2021-08": 38.40581018518519,
+  "2021-09": 46.12462380300958,
+  "2021-10": 52.614228219696976,
+  "2021-11": 44.20385487528345,
+  "2021-12": 54.3057805907173,
+  "2022-01": 53.59953445065177,
+  "2022-02": 53.90133647798742,
+  "2022-03": 47.43173076923077,
+  "2022-04": 34.14564285714285,
+  "2022-05": 61.37933513027853,
+  "2022-06": 40.42169811320755,
+  "2022-07": 46.59353448275862,
+  "2022-08": 50.31879666227493,
+  "2022-09": 46.068969448244424,
+  "2022-10": 58.71318681318681,
+  "2022-11": 36.13529005524862,
+  "2022-12": 50.354993252361666,
+  "2023-01": 44.39418173388966,
+  "2023-02": 50.41742886178862,
+  "2023-03": 41.573929359823396,
+  "2023-04": 37.25852301466869,
+  "2023-05": 36.931037527593816,
+  "2023-06": 46.33680649526387,
+  "2023-07": 44.17009165460685,
+  "2023-08": 42.906200527704485,
+  "2023-09": 44.2269550342131,
+  "2023-10": 39.661134356113436,
+  "2023-11": 42.332206896551725,
+  "2023-12": 53.0533894343151,
+  "2024-01": 56.96086956521739,
+  "2024-02": 39.62545761078998,
+  "2024-03": 43.98352245862884,
+  "2024-04": 27.506703652334718,
+  "2024-05": 42.74490196078431,
+  "2024-06": 53.716892230576434,
+  "2024-07": 41.66124234470691,
+  "2024-08": 51.538147138964575,
+  "2024-09": 37.41935483870967,
+  "2024-10": 48.825662393162396,
+  "2024-11": 47.55909090909091
+ },
+ "winter_test": {
+  "winter_mean": 46.814432860840355,
+  "other_mean": 42.15069648906322,
+  "diff": 4.663736371777134,
+  "pct": 0.11064434897267295,
+  "t": 3.6875075503897787,
+  "p": 0.00023873317290596847,
+  "mw_p": 5.7076809490700064e-05,
+  "cohens_d": 0.17228135540543793,
+  "n_winter_days": 621,
+  "n_other_days": 1966,
+  "ci95": [
+   2.1800440446673086,
+   7.147428698886959
+  ]
+ },
+ "jan_vs_rest_pct": 0.1330568230137661,
+ "mediation": {
+  "winter_coef_alone": 4.6637363717771505,
+  "winter_p_alone": 0.00022871773390346133,
+  "winter_coef_with_workload": 1.316472387598271,
+  "winter_p_with_workload": 0.0553948320388488,
+  "workload_coef_per_100min": 29.266823260856395,
+  "r2_workload_only": 0.6988106781452292,
+  "r2_full": 0.699251574483007
+ },
+ "trend_wait": {
+  "slope_min_per_year": 0.2911985407084148,
+  "p": 0.073371063905307,
+  "ci95": [
+   -0.02755805464004507,
+   0.6099551360568747
+  ]
+ },
+ "trend_lead": {
+  "slope_days_per_year": -0.0035635442476358754,
+  "p": 0.5831957583301954
+ },
+ "trend_by_block": [
+  {
+   "time_block": "08-10",
+   "slope_per_year": -0.056688454004534115,
+   "p": 0.39842114719658256,
+   "mean": 19.8908403084554
+  },
+  {
+   "time_block": "10-12",
+   "slope_per_year": 0.117892712935085,
+   "p": 0.40730043339454447,
+   "mean": 34.482510862818124
+  },
+  {
+   "time_block": "12-14",
+   "slope_per_year": 0.4855486411294059,
+   "p": 0.05956193468788307,
+   "mean": 46.132453280549576
+  },
+  {
+   "time_block": "14-16",
+   "slope_per_year": 0.27572475911408256,
+   "p": 0.3146335429833925,
+   "mean": 55.661642641246225
+  },
+  {
+   "time_block": "16-18",
+   "slope_per_year": 0.5829155045398469,
+   "p": 0.1256255448455392,
+   "mean": 64.18775029446407
+  }
+ ],
+ "lead_time": {
+  "mean": 7.190146024684271,
+  "median": 5.0,
+  "p90": 16.0,
+  "share_gt_14": 0.13044453214695753,
+  "share_gt_22_iqr": 0.032362227324913895
+ },
+ "lead_by_winter": {
+  "0": 7.181849359618727,
+  "1": 7.216198150692562
+ },
+ "segment_tests": [
+  {
+   "factor": "age_group",
+   "wait_eta2": 5.5e-05,
+   "wait_p": 0.180838,
+   "dna_cramers_v": 0.011862,
+   "dna_p": 0.59944,
+   "cancel_cramers_v": 0.010736,
+   "cancel_p": 0.61902,
+   "wait_p_bonf": 1.0,
+   "dna_p_bonf": 1.0,
+   "cancel_p_bonf": 1.0
+  },
+  {
+   "factor": "age_band",
+   "wait_eta2": -1.7e-05,
+   "wait_p": 0.640311,
+   "dna_cramers_v": 0.00511,
+   "dna_p": 0.659231,
+   "cancel_cramers_v": 0.00518,
+   "cancel_p": 0.561817,
+   "wait_p_bonf": 1.0,
+   "dna_p_bonf": 1.0,
+   "cancel_p_bonf": 1.0
+  },
+  {
+   "factor": "sex",
+   "wait_eta2": -9e-06,
+   "wait_p": 0.65938,
+   "dna_cramers_v": 0.002238,
+   "dna_p": 0.495839,
+   "cancel_cramers_v": 0.004718,
+   "cancel_p": 0.116127,
+   "wait_p_bonf": 1.0,
+   "dna_p_bonf": 1.0,
+   "cancel_p_bonf": 1.0
+  },
+  {
+   "factor": "insurance",
+   "wait_eta2": -6.2e-05,
+   "wait_p": 0.909826,
+   "dna_cramers_v": 0.008554,
+   "dna_p": 0.7461,
+   "cancel_cramers_v": 0.007264,
+   "cancel_p": 0.827502,
+   "wait_p_bonf": 1.0,
+   "dna_p_bonf": 1.0,
+   "cancel_p_bonf": 1.0
+  },
+  {
+   "factor": "weekday",
+   "wait_eta2": 0.000852,
+   "wait_p": 0.0,
+   "dna_cramers_v": 0.004074,
+   "dna_p": 0.819916,
+   "cancel_cramers_v": 0.00539,
+   "cancel_p": 0.521429,
+   "wait_p_bonf": 0.0,
+   "dna_p_bonf": 1.0,
+   "cancel_p_bonf": 1.0
+  },
+  {
+   "factor": "time_block",
+   "wait_eta2": 0.14477,
+   "wait_p": 0.0,
+   "dna_cramers_v": 0.00968,
+   "dna_p": 0.069587,
+   "cancel_cramers_v": 0.005853,
+   "cancel_p": 0.433881,
+   "wait_p_bonf": 0.0,
+   "dna_p_bonf": 1.0,
+   "cancel_p_bonf": 1.0
+  },
+  {
+   "factor": "lead_time_band",
+   "wait_eta2": 2e-06,
+   "wait_p": 0.38304,
+   "dna_cramers_v": 0.002726,
+   "dna_p": 0.952756,
+   "cancel_cramers_v": 0.007371,
+   "cancel_p": 0.197248,
+   "wait_p_bonf": 1.0,
+   "dna_p_bonf": 1.0,
+   "cancel_p_bonf": 1.0
+  },
+  {
+   "factor": "season",
+   "wait_eta2": 0.002516,
+   "wait_p": 0.0,
+   "dna_cramers_v": 0.010933,
+   "dna_p": 0.011327,
+   "cancel_cramers_v": 0.003817,
+   "cancel_p": 0.655749,
+   "wait_p_bonf": 0.0,
+   "dna_p_bonf": 0.271841,
+   "cancel_p_bonf": 1.0
+  }
+ ],
+ "n_tests_bonferroni": 24,
+ "dna_model": {
+  "auc_cv5": 0.49980415714112814,
+  "n": 92647,
+  "base_rate": 0.07140004533336211,
+  "features": [
+   "age",
+   "lead_time_days",
+   "hour",
+   "prior_dna",
+   "prior_appts",
+   "sex_Male",
+   "..."
+  ]
+ },
+ "dna_by_prior_dna": [
+  {
+   "prior_dna": 0.0,
+   "mean": 0.0711,
+   "size": 83000
+  },
+  {
+   "prior_dna": 1.0,
+   "mean": 0.0742,
+   "size": 8652
+  },
+  {
+   "prior_dna": 2.0,
+   "mean": 0.0744,
+   "size": 995
+  }
+ ],
+ "dna_vs_prev_wait": {
+  "corr": -0.0003711340745787561,
+  "dna_after_wait_gt_60": 0.0711441465357048,
+  "dna_after_wait_le_30": 0.0718629961587708
+ },
+ "daily_corr": {
+  "mean_wait": {
+   "mean_wait": 1.0,
+   "attended": 0.421,
+   "dna": -0.23,
+   "cancelled_appts": -0.272,
+   "workload_min": 0.836,
+   "slot_booked_rate": 0.332,
+   "time_load_pct": 0.836
+  },
+  "attended": {
+   "mean_wait": 0.421,
+   "attended": 1.0,
+   "dna": -0.588,
+   "cancelled_appts": -0.557,
+   "workload_min": 0.551,
+   "slot_booked_rate": 0.749,
+   "time_load_pct": 0.551
+  },
+  "dna": {
+   "mean_wait": -0.23,
+   "attended": -0.588,
+   "dna": 1.0,
+   "cancelled_appts": -0.045,
+   "workload_min": -0.316,
+   "slot_booked_rate": 0.067,
+   "time_load_pct": -0.316
+  },
+  "cancelled_appts": {
+   "mean_wait": -0.272,
+   "attended": -0.557,
+   "dna": -0.045,
+   "cancelled_appts": 1.0,
+   "workload_min": -0.334,
+   "slot_booked_rate": -0.742,
+   "time_load_pct": -0.334
+  },
+  "workload_min": {
+   "mean_wait": 0.836,
+   "attended": 0.551,
+   "dna": -0.316,
+   "cancelled_appts": -0.334,
+   "workload_min": 1.0,
+   "slot_booked_rate": 0.419,
+   "time_load_pct": 1.0
+  },
+  "slot_booked_rate": {
+   "mean_wait": 0.332,
+   "attended": 0.749,
+   "dna": 0.067,
+   "cancelled_appts": -0.742,
+   "workload_min": 0.419,
+   "slot_booked_rate": 1.0,
+   "time_load_pct": 0.419
+  },
+  "time_load_pct": {
+   "mean_wait": 0.836,
+   "attended": 0.551,
+   "dna": -0.316,
+   "cancelled_appts": -0.334,
+   "workload_min": 1.0,
+   "slot_booked_rate": 0.419,
+   "time_load_pct": 1.0
+  }
+ },
+ "daily_ols": {
+  "coef": {
+   "Intercept": -93.715,
+   "attended": 4.254,
+   "dna": -0.113,
+   "cancelled_appts": -0.594
+  },
+  "p": {
+   "Intercept": 0.0,
+   "attended": 0.0,
+   "dna": 0.795079,
+   "cancelled_appts": 0.022093
+  },
+  "r2": 0.17904244626886967
+ },
+ "wait_vs_workload": {
+  "slope_per_100min": 29.314118934735756,
+  "r2": 0.6988106781452292,
+  "p": 0.0,
+  "corr": 0.8359489686250176
+ },
+ "corr_booked_rate_wait": 0.33193558001766627,
+ "corr_time_load_wait": 0.8359489686250178,
+ "wait_by_load_quartile": [
+  {
+   "load_q": "Q1 lightest",
+   "wait": 19.411,
+   "overrun": 15.101,
+   "load": 0.81
+  },
+  {
+   "load_q": "Q2",
+   "wait": 31.074,
+   "overrun": 30.002,
+   "load": 0.924
+  },
+  {
+   "load_q": "Q3",
+   "wait": 47.789,
+   "overrun": 61.909,
+   "load": 1.009
+  },
+  {
+   "load_q": "Q4 heaviest",
+   "wait": 74.814,
+   "overrun": 126.628,
+   "load": 1.132
+  }
+ ],
+ "utilisation_by_hour": [
+  {
+   "dimension": "hour",
+   "segment": "8",
+   "slots": 10357,
+   "booked": 9284,
+   "attended": 8616,
+   "dna": 668,
+   "open_slots": 1073,
+   "booked_rate": 0.8964,
+   "effective_rate": 0.8319,
+   "dna_rate_slots": 0.0645,
+   "open_rate_slots": 0.1036
+  },
+  {
+   "dimension": "hour",
+   "segment": "9",
+   "slots": 10356,
+   "booked": 9227,
+   "attended": 8588,
+   "dna": 639,
+   "open_slots": 1129,
+   "booked_rate": 0.891,
+   "effective_rate": 0.8293,
+   "dna_rate_slots": 0.0617,
+   "open_rate_slots": 0.109
+  },
+  {
+   "dimension": "hour",
+   "segment": "10",
+   "slots": 10357,
+   "booked": 9240,
+   "attended": 8563,
+   "dna": 677,
+   "open_slots": 1117,
+   "booked_rate": 0.8922,
+   "effective_rate": 0.8268,
+   "dna_rate_slots": 0.0654,
+   "open_rate_slots": 0.1078
+  },
+  {
+   "dimension": "hour",
+   "segment": "11",
+   "slots": 10345,
+   "booked": 9283,
+   "attended": 8621,
+   "dna": 662,
+   "open_slots": 1062,
+   "booked_rate": 0.8973,
+   "effective_rate": 0.8333,
+   "dna_rate_slots": 0.064,
+   "open_rate_slots": 0.1027
+  },
+  {
+   "dimension": "hour",
+   "segment": "12",
+   "slots": 10353,
+   "booked": 9248,
+   "attended": 8595,
+   "dna": 653,
+   "open_slots": 1105,
+   "booked_rate": 0.8933,
+   "effective_rate": 0.8302,
+   "dna_rate_slots": 0.0631,
+   "open_rate_slots": 0.1067
+  },
+  {
+   "dimension": "hour",
+   "segment": "13",
+   "slots": 10358,
+   "booked": 9226,
+   "attended": 8582,
+   "dna": 644,
+   "open_slots": 1132,
+   "booked_rate": 0.8907,
+   "effective_rate": 0.8285,
+   "dna_rate_slots": 0.0622,
+   "open_rate_slots": 0.1093
+  },
+  {
+   "dimension": "hour",
+   "segment": "14",
+   "slots": 10370,
+   "booked": 9323,
+   "attended": 8585,
+   "dna": 738,
+   "open_slots": 1047,
+   "booked_rate": 0.899,
+   "effective_rate": 0.8279,
+   "dna_rate_slots": 0.0712,
+   "open_rate_slots": 0.101
+  },
+  {
+   "dimension": "hour",
+   "segment": "15",
+   "slots": 10362,
+   "booked": 9289,
+   "attended": 8619,
+   "dna": 670,
+   "open_slots": 1073,
+   "booked_rate": 0.8964,
+   "effective_rate": 0.8318,
+   "dna_rate_slots": 0.0647,
+   "open_rate_slots": 0.1036
+  },
+  {
+   "dimension": "hour",
+   "segment": "16",
+   "slots": 10356,
+   "booked": 9264,
+   "attended": 8597,
+   "dna": 667,
+   "open_slots": 1092,
+   "booked_rate": 0.8946,
+   "effective_rate": 0.8301,
+   "dna_rate_slots": 0.0644,
+   "open_rate_slots": 0.1054
+  },
+  {
+   "dimension": "hour",
+   "segment": "17",
+   "slots": 10359,
+   "booked": 9263,
+   "attended": 8666,
+   "dna": 597,
+   "open_slots": 1096,
+   "booked_rate": 0.8942,
+   "effective_rate": 0.8366,
+   "dna_rate_slots": 0.0576,
+   "open_rate_slots": 0.1058
+  }
+ ],
+ "utilisation_by_dow": [
+  {
+   "dimension": "dow",
+   "segment": "0",
+   "slots": 20725,
+   "booked": 18546,
+   "attended": 17231,
+   "dna": 1315,
+   "open_slots": 2179,
+   "booked_rate": 0.8949,
+   "effective_rate": 0.8314,
+   "dna_rate_slots": 0.0634,
+   "open_rate_slots": 0.1051
+  },
+  {
+   "dimension": "dow",
+   "segment": "1",
+   "slots": 20711,
+   "booked": 18507,
+   "attended": 17155,
+   "dna": 1352,
+   "open_slots": 2204,
+   "booked_rate": 0.8936,
+   "effective_rate": 0.8283,
+   "dna_rate_slots": 0.0653,
+   "open_rate_slots": 0.1064
+  },
+  {
+   "dimension": "dow",
+   "segment": "2",
+   "slots": 20690,
+   "booked": 18520,
+   "attended": 17193,
+   "dna": 1327,
+   "open_slots": 2170,
+   "booked_rate": 0.8951,
+   "effective_rate": 0.831,
+   "dna_rate_slots": 0.0641,
+   "open_rate_slots": 0.1049
+  },
+  {
+   "dimension": "dow",
+   "segment": "3",
+   "slots": 20721,
+   "booked": 18503,
+   "attended": 17179,
+   "dna": 1324,
+   "open_slots": 2218,
+   "booked_rate": 0.893,
+   "effective_rate": 0.8291,
+   "dna_rate_slots": 0.0639,
+   "open_rate_slots": 0.107
+  },
+  {
+   "dimension": "dow",
+   "segment": "4",
+   "slots": 20726,
+   "booked": 18571,
+   "attended": 17274,
+   "dna": 1297,
+   "open_slots": 2155,
+   "booked_rate": 0.896,
+   "effective_rate": 0.8334,
+   "dna_rate_slots": 0.0626,
+   "open_rate_slots": 0.104
+  }
+ ],
+ "p_att_by_hour": {
+  "8": 0.831901129670754,
+  "9": 0.8292777134028583,
+  "10": 0.8267838177078305,
+  "11": 0.8333494441759304,
+  "12": 0.8301941466241669,
+  "13": 0.8285383278625217,
+  "14": 0.8278688524590164,
+  "15": 0.8317892298784019,
+  "16": 0.8301467748165314,
+  "17": 0.8365672362197123
+ },
+ "sim_params": {
+  "p_att": 0.8306411902715959,
+  "p_dna": 0.06386799648557057,
+  "p_open_cancel": 0.10052812991802883,
+  "p_never_booked": 0.004962683324804727,
+  "q_dna_given_filled": 0.07140004533336212,
+  "calibrated_changeover_min": 1.0281982421875,
+  "mean_duration_min": 17.479525060442626,
+  "observed_median_gap_min": 1.0166666666666515
+ },
+ "sim_validation": {
+  "obs_mean_wait": 44.08641745707024,
+  "sim_mean_wait": 45.4909690152386,
+  "hour_profile_rmse_min": 1.7045555539198218,
+  "hour_profile_corr": 0.9995609132953119,
+  "obs_finish_h": 18.951162543486664,
+  "sim_finish_h": 18.994275660013837,
+  "obs_p25_p75_finish_h": [
+   18.279444444444444,
+   19.450833333333332
+  ],
+  "sim_p25_p75_finish_h": [
+   18.315207214355464,
+   19.53934573703342
+  ],
+  "obs_p90_wait": 100.6316666666668,
+  "sim_p90_wait": 103.03189290364548,
+  "obs_share_gt30": 0.5380556072159196,
+  "sim_share_gt30": 0.5596997536031221,
+  "obs_hour": {
+   "8": 15.733120550913032,
+   "9": 24.062115742897063,
+   "10": 31.37190626338121,
+   "11": 37.57218806789622,
+   "12": 43.72554973821989,
+   "13": 48.54300279655092,
+   "14": 53.2935022325762,
+   "15": 58.02044127315621,
+   "16": 62.404813694699705,
+   "17": 65.95649088391416
+  },
+  "sim_hour": {
+   "8": 14.724658943300982,
+   "9": 24.851916639621514,
+   "10": 32.8072522160671,
+   "11": 39.348910722340655,
+   "12": 45.07702909033067,
+   "13": 50.16335760946991,
+   "14": 55.271929362121256,
+   "15": 59.90687053492568,
+   "16": 64.18789887298583,
+   "17": 68.61978330500725
+  }
+ },
+ "lp_frontier": [
+  {
+   "scenario": "LP cap rho*=1.00",
+   "mean_wait": 43.184427954787346,
+   "mean_wait_ci": 0.5880471229683442,
+   "p90_wait": 100.04244832356777,
+   "p90_wait_ci": 1.8454180019897914,
+   "share_gt30": 0.5376536318373525,
+   "share_gt30_ci": 0.00674225137753386,
+   "attended_per_day": 32.393499999999996,
+   "attended_per_day_ci": 0.0570373470631299,
+   "mean_finish_h": 18.95771942518446,
+   "mean_finish_h_ci": 0.02458647971309344,
+   "share_overrun30": 0.6545,
+   "share_overrun30_ci": 0.012279364804418845,
+   "overrun_mean": 58.82945009087456,
+   "overrun_mean_ci": 1.3703348889822704,
+   "load": 0.9992165580062483,
+   "load_ci": 0.0017593857289342051,
+   "rho_star": 1.0,
+   "lp_expected_attended": 32.41889836355421,
+   "lp_slots_offered": 39.0311345,
+   "lp_status": "Optimal",
+   "lp_solution": {
+    "8": 3.897,
+    "9": 3.909,
+    "10": 3.921,
+    "11": 3.429,
+    "12": 4.0,
+    "13": 4.0,
+    "14": 4.0,
+    "15": 4.0,
+    "16": 4.0,
+    "17": 3.875
+   }
+  },
+  {
+   "scenario": "LP cap rho*=0.97",
+   "mean_wait": 38.03592919946558,
+   "mean_wait_ci": 0.522284127919057,
+   "p90_wait": 88.99430392795126,
+   "p90_wait_ci": 1.4941418852806543,
+   "share_gt30": 0.49217602877631106,
+   "share_gt30_ci": 0.007053695163350982,
+   "attended_per_day": 31.5525,
+   "attended_per_day_ci": 0.05077055813493996,
+   "mean_finish_h": 18.816982931835035,
+   "mean_finish_h_ci": 0.021069592983337784,
+   "share_overrun30": 0.5953333333333334,
+   "share_overrun30_ci": 0.012110481043753438,
+   "overrun_mean": 50.63735897081162,
+   "overrun_mean_ci": 1.1689625749653743,
+   "load": 0.9732748991770617,
+   "load_ci": 0.0015660790698026536,
+   "rho_star": 0.97,
+   "lp_expected_attended": 31.446331380948777,
+   "lp_slots_offered": 37.8628226,
+   "lp_status": "Optimal",
+   "lp_solution": {
+    "8": 3.78,
+    "9": 3.792,
+    "10": 3.803,
+    "11": 2.728,
+    "12": 4.0,
+    "13": 4.0,
+    "14": 4.0,
+    "15": 4.0,
+    "16": 4.0,
+    "17": 3.759
+   }
+  },
+  {
+   "scenario": "LP cap rho*=0.94",
+   "mean_wait": 33.52284296541861,
+   "mean_wait_ci": 0.4607804220697744,
+   "p90_wait": 79.72911159939225,
+   "p90_wait_ci": 1.3604675730246842,
+   "share_gt30": 0.44475950039168416,
+   "share_gt30_ci": 0.0072152612521912025,
+   "attended_per_day": 30.723833333333335,
+   "attended_per_day_ci": 0.049194091153759674,
+   "mean_finish_h": 18.697289707709416,
+   "mean_finish_h_ci": 0.022415512859270195,
+   "share_overrun30": 0.5388333333333334,
+   "share_overrun30_ci": 0.015160289941525226,
+   "overrun_mean": 43.74665318332248,
+   "overrun_mean_ci": 1.2093709229128433,
+   "load": 0.9477136768824294,
+   "load_ci": 0.001517451045330286,
+   "rho_star": 0.94,
+   "lp_expected_attended": 30.47376439819851,
+   "lp_slots_offered": 36.6945107,
+   "lp_status": "Optimal",
+   "lp_solution": {
+    "8": 3.663,
+    "9": 3.675,
+    "10": 3.686,
+    "11": 2.028,
+    "12": 4.0,
+    "13": 4.0,
+    "14": 4.0,
+    "15": 4.0,
+    "16": 4.0,
+    "17": 3.643
+   }
+  },
+  {
+   "scenario": "LP cap rho*=0.91",
+   "mean_wait": 29.974247199791744,
+   "mean_wait_ci": 0.40096970190458125,
+   "p90_wait": 72.30492092556429,
+   "p90_wait_ci": 1.1960851880095087,
+   "share_gt30": 0.4046460264567626,
+   "share_gt30_ci": 0.007009617688458768,
+   "attended_per_day": 29.891499999999997,
+   "attended_per_day_ci": 0.053690526290336646,
+   "mean_finish_h": 18.57869883895309,
+   "mean_finish_h_ci": 0.02232653664064299,
+   "share_overrun30": 0.46900000000000003,
+   "share_overrun30_ci": 0.01789227021183542,
+   "overrun_mean": 37.06244147677951,
+   "overrun_mean_ci": 1.2005702524074928,
+   "load": 0.9220393518342807,
+   "load_ci": 0.0016561490075902106,
+   "rho_star": 0.91,
+   "lp_expected_attended": 29.501197414936517,
+   "lp_slots_offered": 35.5261988,
+   "lp_status": "Optimal",
+   "lp_solution": {
+    "8": 3.546,
+    "9": 3.557,
+    "10": 3.568,
+    "11": 1.328,
+    "12": 4.0,
+    "13": 4.0,
+    "14": 4.0,
+    "15": 4.0,
+    "16": 4.0,
+    "17": 3.526
+   }
+  },
+  {
+   "scenario": "LP cap rho*=0.88",
+   "mean_wait": 23.489768795771482,
+   "mean_wait_ci": 0.2888721145959197,
+   "p90_wait": 58.9856009928385,
+   "p90_wait_ci": 0.8841072758634819,
+   "share_gt30": 0.319574371015883,
+   "share_gt30_ci": 0.0051201904840621985,
+   "attended_per_day": 28.220499999999998,
+   "attended_per_day_ci": 0.05155644544251164,
+   "mean_finish_h": 18.403747975667315,
+   "mean_finish_h_ci": 0.01394073610537462,
+   "share_overrun30": 0.3658333333333334,
+   "share_overrun30_ci": 0.012635709890799358,
+   "overrun_mean": 27.39342265082465,
+   "overrun_mean_ci": 0.7085756093728167,
+   "load": 0.8704953424364557,
+   "load_ci": 0.0015903207111952482,
+   "rho_star": 0.88,
+   "lp_expected_attended": 28.528630473853713,
+   "lp_slots_offered": 34.35788695,
+   "lp_status": "Optimal",
+   "lp_solution": {
+    "8": 3.429,
+    "9": 3.44,
+    "10": 3.451,
+    "11": 0.628,
+    "12": 4.0,
+    "13": 4.0,
+    "14": 4.0,
+    "15": 4.0,
+    "16": 4.0,
+    "17": 3.41
+   }
+  },
+  {
+   "scenario": "LP cap rho*=0.85",
+   "mean_wait": 20.770423037302233,
+   "mean_wait_ci": 0.21503410897172717,
+   "p90_wait": 53.35982774522563,
+   "p90_wait_ci": 0.5952615705109248,
+   "share_gt30": 0.2807869632851728,
+   "share_gt30_ci": 0.005191222900440549,
+   "attended_per_day": 27.389,
+   "attended_per_day_ci": 0.053736418439143535,
+   "mean_finish_h": 18.327161370827003,
+   "mean_finish_h_ci": 0.009095926272162288,
+   "share_overrun30": 0.31183333333333335,
+   "share_overrun30_ci": 0.0075980728550805055,
+   "overrun_mean": 23.308899347602004,
+   "overrun_mean_ci": 0.6228492561403038,
+   "load": 0.8448467225595607,
+   "load_ci": 0.0016575646062433223,
+   "rho_star": 0.85,
+   "lp_expected_attended": 27.55606356608081,
+   "lp_slots_offered": 33.1891535,
+   "lp_status": "Optimal",
+   "lp_solution": {
+    "8": 3.312,
+    "9": 3.323,
+    "10": 3.333,
+    "11": 0.0,
+    "12": 4.0,
+    "13": 3.927,
+    "14": 4.0,
+    "15": 4.0,
+    "16": 4.0,
+    "17": 3.294
+   }
+  },
+  {
+   "scenario": "LP cap rho*=0.82",
+   "mean_wait": 18.370924063314863,
+   "mean_wait_ci": 0.20496631760781597,
+   "p90_wait": 48.196378716362936,
+   "p90_wait_ci": 0.4495110155960149,
+   "share_gt30": 0.2440475090367157,
+   "share_gt30_ci": 0.0053942157079679325,
+   "attended_per_day": 26.560000000000002,
+   "attended_per_day_ci": 0.0525874489461762,
+   "mean_finish_h": 18.24295609056261,
+   "mean_finish_h_ci": 0.011087234033946413,
+   "share_overrun30": 0.244,
+   "share_overrun30_ci": 0.009010317049545667,
+   "overrun_mean": 18.92300963541667,
+   "overrun_mean_ci": 0.565718025756974,
+   "load": 0.8192752181964269,
+   "load_ci": 0.001622123257145005,
+   "rho_star": 0.82,
+   "lp_expected_attended": 26.58349657388772,
+   "lp_slots_offered": 32.0167755,
+   "lp_status": "Optimal",
+   "lp_solution": {
+    "8": 3.196,
+    "9": 3.206,
+    "10": 3.215,
+    "11": 0.0,
+    "12": 4.0,
+    "13": 3.223,
+    "14": 4.0,
+    "15": 4.0,
+    "16": 4.0,
+    "17": 3.178
+   }
+  }
+ ],
+ "lp_recommended": {
+  "scenario": "LP cap rho*=0.91",
+  "mean_wait": 29.974247199791744,
+  "mean_wait_ci": 0.40096970190458125,
+  "p90_wait": 72.30492092556429,
+  "p90_wait_ci": 1.1960851880095087,
+  "share_gt30": 0.4046460264567626,
+  "share_gt30_ci": 0.007009617688458768,
+  "attended_per_day": 29.891499999999997,
+  "attended_per_day_ci": 0.053690526290336646,
+  "mean_finish_h": 18.57869883895309,
+  "mean_finish_h_ci": 0.02232653664064299,
+  "share_overrun30": 0.46900000000000003,
+  "share_overrun30_ci": 0.01789227021183542,
+  "overrun_mean": 37.06244147677951,
+  "overrun_mean_ci": 1.2005702524074928,
+  "load": 0.9220393518342807,
+  "load_ci": 0.0016561490075902106,
+  "rho_star": 0.91,
+  "lp_expected_attended": 29.501197414936517,
+  "lp_slots_offered": 35.5261988,
+  "lp_status": "Optimal",
+  "lp_solution": {
+   "8": 3.546,
+   "9": 3.557,
+   "10": 3.568,
+   "11": 1.328,
+   "12": 4.0,
+   "13": 4.0,
+   "14": 4.0,
+   "15": 4.0,
+   "16": 4.0,
+   "17": 3.526
+  }
+ },
+ "placement_test": [
+  {
+   "scenario": "36 slots - Spread evenly",
+   "mean_wait": 29.974247199791744,
+   "mean_wait_ci": 0.40096970190458125,
+   "p90_wait": 72.30492092556429,
+   "p90_wait_ci": 1.1960851880095087,
+   "share_gt30": 0.4046460264567626,
+   "share_gt30_ci": 0.007009617688458768,
+   "attended_per_day": 29.891499999999997,
+   "attended_per_day_ci": 0.053690526290336646,
+   "mean_finish_h": 18.57869883895309,
+   "mean_finish_h_ci": 0.02232653664064299,
+   "share_overrun30": 0.46900000000000003,
+   "share_overrun30_ci": 0.01789227021183542,
+   "overrun_mean": 37.06244147677951,
+   "overrun_mean_ci": 1.2005702524074928,
+   "load": 0.9220393518342807,
+   "load_ci": 0.0016561490075902106
+  },
+  {
+   "scenario": "36 slots - Trim from end of day",
+   "mean_wait": 42.9460333652844,
+   "mean_wait_ci": 0.6564412667207368,
+   "p90_wait": 97.79599161783854,
+   "p90_wait_ci": 1.863007528561121,
+   "share_gt30": 0.5397206511969608,
+   "share_gt30_ci": 0.008034696720135298,
+   "attended_per_day": 29.891499999999997,
+   "attended_per_day_ci": 0.053690526290336646,
+   "mean_finish_h": 17.916646115270545,
+   "mean_finish_h_ci": 0.019169878249212135,
+   "share_overrun30": 0.22883333333333333,
+   "share_overrun30_ci": 0.01040114053575109,
+   "overrun_mean": 18.211261596679687,
+   "overrun_mean_ci": 0.8355359886588266,
+   "load": 0.9220393518342807,
+   "load_ci": 0.0016561490075902106
+  },
+  {
+   "scenario": "36 slots - Midday block removed",
+   "mean_wait": 30.503491180948046,
+   "mean_wait_ci": 0.23626934274746944,
+   "p90_wait": 71.71378580729161,
+   "p90_wait_ci": 0.7790540110874794,
+   "share_gt30": 0.4170498805195622,
+   "share_gt30_ci": 0.0040311018514257325,
+   "attended_per_day": 29.891499999999997,
+   "attended_per_day_ci": 0.053690526290336646,
+   "mean_finish_h": 18.62785068158185,
+   "mean_finish_h_ci": 0.02525463809503906,
+   "share_overrun30": 0.5106666666666667,
+   "share_overrun30_ci": 0.019314814118816814,
+   "overrun_mean": 39.737809799533416,
+   "overrun_mean_ci": 1.4147633505968187,
+   "load": 0.9220393518342807,
+   "load_ci": 0.0016561490075902106
+  }
+ ],
+ "grid_best": {
+  "offered_slots": 36.0,
+  "dur_shift": -2.0,
+  "refill": 0.7,
+  "dna_cut": 0.25,
+  "attended_per_day": 32.867,
+  "mean_wait": 28.373178329527352,
+  "p90_wait": 66.59477539062493,
+  "share_gt30": 0.39075668603766694,
+  "mean_finish_h": 18.563611460548678,
+  "overrun_mean": 35.72717546657986
+ },
+ "grid_best_no_duration_change": {
+  "offered_slots": 35.0,
+  "dur_shift": 0.0,
+  "refill": 0.0,
+  "dna_cut": 0.0,
+  "attended_per_day": 29.087666666666667,
+  "mean_wait": 29.36560688368737,
+  "p90_wait": 69.39173014322897,
+  "share_gt30": 0.4029199087814996,
+  "mean_finish_h": 18.587200011438437,
+  "overrun_mean": 37.37798807508681
+ },
+ "scenarios": [
+  {
+   "scenario": "S0 Baseline (as observed)",
+   "mean_wait": 45.238665553846786,
+   "mean_wait_ci": 0.5008026109497696,
+   "p90_wait": 102.65464322916671,
+   "p90_wait_ci": 1.3463025333387548,
+   "share_gt30": 0.5563334648279226,
+   "share_gt30_ci": 0.005381574989223932,
+   "attended_per_day": 33.234300000000005,
+   "attended_per_day_ci": 0.053029622262781406,
+   "mean_finish_h": 18.983307164767798,
+   "mean_finish_h_ci": 0.016902228999479272,
+   "share_overrun30": 0.6581999999999999,
+   "share_overrun30_ci": 0.0053621116901625444,
+   "overrun_mean": 60.389790360514326,
+   "overrun_mean_ci": 0.919905459668062,
+   "load": 1.025152047594334,
+   "load_ci": 0.001635762626137563
+  },
+  {
+   "scenario": "S1 Fill the gaps: re-fill 70% of cancelled slots + 25% fewer DNAs",
+   "mean_wait": 63.19596584013859,
+   "mean_wait_ci": 0.5335189040052821,
+   "p90_wait": 135.28135343424486,
+   "p90_wait_ci": 1.277172603577182,
+   "share_gt30": 0.6883486377929071,
+   "share_gt30_ci": 0.004941318701513432,
+   "attended_per_day": 36.50520000000001,
+   "attended_per_day_ci": 0.04096540667441201,
+   "mean_finish_h": 19.634419956882056,
+   "mean_finish_h_ci": 0.01649510762178272,
+   "share_overrun30": 0.8589,
+   "share_overrun30_ci": 0.004988062015118366,
+   "overrun_mean": 98.38482624837238,
+   "overrun_mean_ci": 0.9867235861060987,
+   "load": 1.126046901178622,
+   "load_ci": 0.0012636273528495736
+  },
+  {
+   "scenario": "S2 LP-capped bookings (utilisation cap 0.91)",
+   "mean_wait": 29.745466213217803,
+   "mean_wait_ci": 0.3663812554815907,
+   "p90_wait": 71.7757861328126,
+   "p90_wait_ci": 0.9362292118891739,
+   "share_gt30": 0.40131989679508095,
+   "share_gt30_ci": 0.005688253798673123,
+   "attended_per_day": 29.9022,
+   "attended_per_day_ci": 0.04690441942693411,
+   "mean_finish_h": 18.576277905314125,
+   "mean_finish_h_ci": 0.014843783336485977,
+   "share_overrun30": 0.4685,
+   "share_overrun30_ci": 0.013158626405855921,
+   "overrun_mean": 36.89767496175131,
+   "overrun_mean_ci": 0.7906918395521116,
+   "load": 0.9223694062331778,
+   "load_ci": 0.0014468233607070108
+  },
+  {
+   "scenario": "S3 Longer slots: 18-minute template (33 slots)",
+   "mean_wait": 21.001548417693776,
+   "mean_wait_ci": 0.24750184491294325,
+   "p90_wait": 53.2642237141927,
+   "p90_wait_ci": 0.6861501013924355,
+   "share_gt30": 0.2765912777541123,
+   "share_gt30_ci": 0.004663711121463345,
+   "attended_per_day": 27.4002,
+   "attended_per_day_ci": 0.04709241894167047,
+   "mean_finish_h": 18.092444305189346,
+   "mean_finish_h_ci": 0.008384165949813548,
+   "share_overrun30": 0.1794,
+   "share_overrun30_ci": 0.008863207746383672,
+   "overrun_mean": 14.20297552652995,
+   "overrun_mean_ci": 0.4250076568310915,
+   "load": 0.8537294950113232,
+   "load_ci": 0.0014672953862356424
+  },
+  {
+   "scenario": "S4 Shorter consultations (-2 min via pre-visit prep)",
+   "mean_wait": 30.001226368627876,
+   "mean_wait_ci": 0.3375019911580473,
+   "p90_wait": 71.78051953125001,
+   "p90_wait_ci": 0.9738203618377393,
+   "share_gt30": 0.3988446885617419,
+   "share_gt30_ci": 0.004956820810031253,
+   "attended_per_day": 33.234300000000005,
+   "attended_per_day_ci": 0.053029622262781406,
+   "mean_finish_h": 18.471070040581594,
+   "mean_finish_h_ci": 0.013588563392318427,
+   "share_overrun30": 0.40120000000000006,
+   "share_overrun30_ci": 0.007459453182223056,
+   "overrun_mean": 31.567154674479166,
+   "overrun_mean_ci": 0.6964881989584931,
+   "load": 0.9143710475943341,
+   "load_ci": 0.0014589972185949768
+  },
+  {
+   "scenario": "S5 S1 + S4 (fill gaps AND shorten consultations)",
+   "mean_wait": 41.61182520880164,
+   "mean_wait_ci": 0.3731027650782406,
+   "p90_wait": 94.42723152669274,
+   "p90_wait_ci": 1.0935910128571589,
+   "share_gt30": 0.5278246343329208,
+   "share_gt30_ci": 0.0047860111367432805,
+   "attended_per_day": 36.50520000000001,
+   "attended_per_day_ci": 0.04096540667441201,
+   "mean_finish_h": 18.872846434041342,
+   "mean_finish_h_ci": 0.013748463050785658,
+   "share_overrun30": 0.6188999999999999,
+   "share_overrun30_ci": 0.007972005352063773,
+   "overrun_mean": 53.77609955729166,
+   "overrun_mean_ci": 0.8011938894934878,
+   "load": 1.0043629011786224,
+   "load_ci": 0.0011270759972682259
+  },
+  {
+   "scenario": "S6 Recommended package (36 slots, midday reset, -2 min consult, refill + reminders)",
+   "mean_wait": 27.922605807450935,
+   "mean_wait_ci": 0.2143814352956956,
+   "p90_wait": 65.7293050130208,
+   "p90_wait_ci": 0.6162183915629729,
+   "share_gt30": 0.3832613309731679,
+   "share_gt30_ci": 0.003757879968088824,
+   "attended_per_day": 32.8519,
+   "attended_per_day_ci": 0.03627553541070574,
+   "mean_finish_h": 18.55217765637207,
+   "mean_finish_h_ci": 0.015525383275351239,
+   "share_overrun30": 0.4662,
+   "share_overrun30_ci": 0.011461485341011525,
+   "overrun_mean": 35.130479006347656,
+   "overrun_mean_ci": 0.838070901163388,
+   "load": 0.9038501252761243,
+   "load_ci": 0.0009980441686911275
+  }
+ ],
+ "target_sensitivity": [
+  {
+   "target": 25,
+   "offered_slots": 38,
+   "dur_shift": -2.0,
+   "attended_per_day": 31.57133333333333,
+   "mean_wait": 24.72860181117215
+  },
+  {
+   "target": 30,
+   "offered_slots": 36,
+   "dur_shift": -2.0,
+   "attended_per_day": 32.867,
+   "mean_wait": 28.373178329527352
+  },
+  {
+   "target": 35,
+   "offered_slots": 38,
+   "dur_shift": -2.0,
+   "attended_per_day": 34.70133333333333,
+   "mean_wait": 32.97297836331462
+  },
+  {
+   "target": 40,
+   "offered_slots": 39,
+   "dur_shift": -2.0,
+   "attended_per_day": 35.605333333333334,
+   "mean_wait": 36.857637905488836
+  }
+ ]
+}
