@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # NHS Healthcare Efficiency Analysis - end-to-end project pack
 
 | Folder | Contents |
@@ -28,3 +29,7 @@ Runtime ~2-3 minutes. Business assumptions (wait target 30 min, session 08:00-18
 * No specialty or facility field exists; segmentation is by time, weekday, age, sex, insurer.
 * Supplied `waiting_time` / `appointment_duration` are winsorised at the 10th/90th percentile; analysis uses timestamp-derived values.
 * Tableau workbook (.twbx) is not included - build from the guide.
+=======
+# nhs-healthcare-efficiency-analysis
+End-to-end NHS healthcare efficiency analysis using Python, SQL, statistical modelling, optimisation, and Tableau-ready data to investigate patient waiting times, appointment utilization, cancellations, and clinic capacity.
+>>>>>>> bd2804db7cf1dd53c801cdcbda2bf3b06954c8e4
